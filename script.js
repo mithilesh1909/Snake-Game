@@ -6,22 +6,33 @@ let food = null;
 let score = 0;
 let highScore = 0;
 let speed = 100;
+let gameOverState = false; // Flag to track game over state
+
+// Get the game board element for relative positioning
+const gameBoard = document.getElementById("game-board");
+
 window.addEventListener("keydown", (e) => {
-  const newDirection = getDirection(e.key);
-  console.log("Key I have Pressed", e.key);
-  const allowedChange = Math.abs(direction.dx) !== Math.abs(newDirection.dx);
-  if (allowedChange) direction = newDirection;
+  if (!gameOverState) { // Only allow movement if the game is not over
+    const newDirection = getDirection(e.key);
+    console.log("Key I have Pressed", e.key);
+    const allowedChange = Math.abs(direction.dx) !== Math.abs(newDirection.dx);
+    if (allowedChange) direction = newDirection;
+  }
 });
 
 function getDirection(key) {
   switch (key) {
-    case "ArrowUp" || "w":
+    case "ArrowUp":
+    case "w":
       return { key, dx: 0, dy: -20 };
-    case "ArrowDown" || "s":
+    case "ArrowDown":
+    case "s":
       return { key, dx: 0, dy: 20 };
-    case "ArrowLeft" || "a":
+    case "ArrowLeft":
+    case "a":
       return { key, dx: -20, dy: 0 };
-    case "ArrowRight" || "d":
+    case "ArrowRight":
+    case "d":
       return { key, dx: 20, dy: 0 };
     default:
       return direction;
@@ -34,20 +45,30 @@ function moveSnake() {
   head.left += direction.dx;
   snake.unshift(head);
 
-  if (snake[0].top < 0) snake[0].top = 380;
-  if (snake[0].left < 0) snake[0].left = 380;
-  if (snake[0].top > 380) snake[0].top = 0;
-  if (snake[0].left > 380) snake[0].left = 0;
+  // Wrap snake around the screen
+  const boardWidth = gameBoard.offsetWidth; // Get dynamic width of the game board
+  const boardHeight = gameBoard.offsetHeight; // Get dynamic height of the game board
+  if (snake[0].top < 0) snake[0].top = boardHeight - 20; // Adjust for snake segment size
+  if (snake[0].left < 0) snake[0].left = boardWidth - 20; 
+  if (snake[0].top >= boardHeight) snake[0].top = 0;
+  if (snake[0].left >= boardWidth) snake[0].left = 0;
 
   if (!eatFood()) snake.pop(); // if the snake doesn't eat food, remove the tail
 }
 
 function randomFood() {
-  food = {
-    top: Math.floor(Math.random() * 20) * 20,
-    left: Math.floor(Math.random() * 20) * 20,
-  };
+  const boardWidth = gameBoard.offsetWidth; // Get dynamic width of the game board
+  const boardHeight = gameBoard.offsetHeight; // Get dynamic height of the game board
+
+  // Ensure food doesn't spawn on top of the snake
+  do {
+    food = {
+      top: Math.floor(Math.random() * (boardHeight / 20)) * 20,
+      left: Math.floor(Math.random() * (boardWidth / 20)) * 20
+    };
+  } while (snake.some(segment => segment.top === food.top && segment.left === food.left));
 }
+
 
 function eatFood() {
   if (snake[0].top === food.top && snake[0].left === food.left) {
@@ -65,6 +86,22 @@ function gameOver() {
   return false;
 }
 
+function resetGame() {
+  gameOverState = false;
+  if (score > highScore) {
+    highScore = score;
+  }
+  score = 0;
+  speed = 100;
+  snake = [{ top: 200, left: 200 }];
+  direction = { key: "ArrowRight", dx: 20, dy: 0 };
+  food = null;
+  randomFood();
+  updateScore(); // Update score display after resetting
+  gameLoop(); // Restart the game loop
+}
+
+
 function updateScore() {
   document.getElementById("score").innerText = "Score: " + score;
   document.getElementById("high-score").innerText = "High Score: " + highScore;
@@ -72,17 +109,10 @@ function updateScore() {
 
 function gameLoop() {
   if (gameOver()) {
+    gameOverState = true; // Set game over state to true
     alert("Game over!");
-    // Resetting Everything
-    if (score > highScore) {
-      highScore = score;
-    }
-    score = 0;
-    speed = 100;
-    snake = [{ top: 200, left: 200 }];
-    direction = { key: "ArrowRight", dx: 20, dy: 0 };
-    food = null;
-    randomFood();
+    resetGame(); // Reset the game
+    return; // Stop the current game loop
   }
 
   setTimeout(() => {
@@ -114,7 +144,6 @@ function drawSnake() {
     snakeElement.style.left = `${item.left}px`;
     snakeElement.classList.add("snake");
     if (index === 0) snakeElement.classList.add("head");
-    if (index === snake.length - 1) snakeElement.classList.add("head");
     document.getElementById("game-board").appendChild(snakeElement);
   });
 }
